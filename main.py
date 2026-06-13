@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pandas as pd
 from datetime import datetime
+from typing import Optional
 
 app = FastAPI(title="Solari API")
 
@@ -32,10 +33,11 @@ df_history = pd.DataFrame([
     {"id": 2, "user": "Maria Souza", "charger_id": "C1", "date": "2026-06-11", "energy_kwh": 50.0, "cost_coins": 200},
 ])
 
-# Modelo para receber dados do Frontend (Start Session)
+# Modelo AJUSTADO para aceitar as falhas do Lovable
 class SessionStartRequest(BaseModel):
-    charger_id: str
-    user_id: str
+    charger_id: Optional[str] = None
+    carregadorId: Optional[str] = None
+    user_id: Optional[str] = "U1" # Coloca o João Silva como padrão se o Lovable não mandar
 
 # ---------------------------------------------------------
 # ROTAS DA API (Endpoints)
@@ -54,8 +56,14 @@ def get_chargers():
 def start_session(request: SessionStartRequest):
     global df_chargers
     
+    # Extrai o ID do carregador de onde quer que o Lovable tenha mandado
+    target_id = request.charger_id or request.carregadorId
+    
+    if not target_id:
+        raise HTTPException(status_code=400, detail="ID do carregador não enviado")
+
     # Verifica se o carregador existe e está disponível
-    idx = df_chargers.index[df_chargers['id'] == request.charger_id].tolist()
+    idx = df_chargers.index[df_chargers['id'] == target_id].tolist()
     if not idx:
         raise HTTPException(status_code=404, detail="Carregador não encontrado")
         
@@ -65,7 +73,7 @@ def start_session(request: SessionStartRequest):
     # Atualiza o status no Pandas
     df_chargers.at[idx[0], 'status'] = "Em Uso"
     
-    return {"message": "Recarga iniciada com sucesso", "charger_id": request.charger_id}
+    return {"message": "Recarga iniciada com sucesso", "charger_id": target_id}
 
 @app.get("/api/history")
 def get_history():
@@ -73,10 +81,10 @@ def get_history():
 
 @app.get("/api/admin/metrics")
 def get_metrics():
-    # Usa o Pandas para calcular algumas estatísticas da simulação
-    total_energy = df_history['energy_kwh'].sum()
-    total_revenue = df_history['cost_coins'].sum()
-    active_sessions = len(df_chargers[df_chargers['status'] == 'Em Uso'])
+    # AJUSTADO: Usando float() e int() para evitar o erro de CORS do Pandas
+    total_energy = float(df_history['energy_kwh'].sum())
+    total_revenue = float(df_history['cost_coins'].sum())
+    active_sessions = int(len(df_chargers[df_chargers['status'] == 'Em Uso']))
     
     return {
         "total_energy_kwh": total_energy,
@@ -100,7 +108,7 @@ def get_users():
 
 @app.get("/api/admin/payments")
 def get_payments():
-    # Simula a divisão igualitária que você pediu nas regras
-    total = df_history['cost_coins'].sum()
+    # AJUSTADO: Usando float() para evitar o erro de CORS
+    total = float(df_history['cost_coins'].sum())
     usuarios = 2
     return {"total_cluster": total, "cost_per_user": total / usuarios}
