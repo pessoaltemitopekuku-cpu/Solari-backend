@@ -33,11 +33,15 @@ df_history = pd.DataFrame([
     {"id": 2, "user": "Maria Souza", "charger_id": "C1", "date": "2026-06-11", "energy_kwh": 50.0, "cost_coins": 200},
 ])
 
-# Modelo AJUSTADO para aceitar as falhas do Lovable
+# Modelo para receber dados do Frontend (Start Session)
 class SessionStartRequest(BaseModel):
     charger_id: Optional[str] = None
     carregadorId: Optional[str] = None
     user_id: Optional[str] = "U1" # Coloca o João Silva como padrão se o Lovable não mandar
+
+# NOVO MODELO: Para receber e validar o tipo de login
+class LoginRequest(BaseModel):
+    role: str
 
 # ---------------------------------------------------------
 # ROTAS DA API (Endpoints)
@@ -93,10 +97,17 @@ def get_metrics():
         "cluster_name": "Condomínio Solari Alpha"
     }
 
-# Endpoints auxiliares vazios apenas para o Lovable não dar erro
+# ---------------------------------------------------------
+# ENDPOINTS DE AUTENTICAÇÃO E AUXILIARES
+# ---------------------------------------------------------
+
 @app.post("/api/auth/login")
-def login():
-    return {"token": "fake-jwt-token-123", "user": {"name": "Visitante Solari", "role": "admin"}}
+def login(request: LoginRequest):
+    # Agora a API avalia o que o botão mandou e devolve o acesso correto
+    if request.role == "admin":
+        return {"token": "token-admin-123", "user": {"nome": "Mariana Admin", "role": "admin"}}
+    else:
+        return {"token": "token-func-123", "user": {"nome": "João Silva", "role": "funcionario"}}
 
 @app.get("/api/buildings")
 def get_buildings():
