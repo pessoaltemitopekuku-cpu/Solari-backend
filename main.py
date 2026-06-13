@@ -102,13 +102,29 @@ def get_metrics():
 # ---------------------------------------------------------
 
 @app.post("/api/auth/login")
-def login(request: LoginRequest):
-    # Agora a API avalia o que o botão mandou e devolve o acesso correto
-    if request.role == "admin":
-        return {"token": "token-admin-123", "user": {"nome": "Mariana Admin", "role": "admin"}}
-    else:
-        return {"token": "token-func-123", "user": {"nome": "João Silva", "role": "funcionario"}}
+async def login(request: Request):
+    role = "admin" # O padrão será admin caso o frontend não mande nada
+    
+    # 1. Tenta ler a informação do corpo (JSON)
+    try:
+        body = await request.json()
+        if "role" in body:
+            role = body["role"]
+    except:
+        pass
+        
+    # 2. Tenta ler a informação da URL (caso o Lovable tenha mandado por lá)
+    if not role or role == "admin":
+        query_role = request.query_params.get("role")
+        if query_role:
+            role = query_role
 
+    # 3. Devolve a permissão baseada no que conseguiu encontrar
+    if role == "funcionario":
+        return {"token": "token-func-123", "user": {"nome": "João Silva", "role": "funcionario"}}
+    
+    # Se não achou nada ou achou admin, devolve admin
+    return {"token": "token-admin-123", "user": {"nome": "Mariana Admin", "role": "admin"}}
 @app.get("/api/buildings")
 def get_buildings():
     return [{"id": "B1", "name": "Condomínio Solari Alpha"}]
