@@ -9,7 +9,7 @@ app = FastAPI(title="Solari API")
 # Configuração de Segurança (CORS)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://solari-energia.lovable.app"], # Bloqueado apenas para o site!
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
